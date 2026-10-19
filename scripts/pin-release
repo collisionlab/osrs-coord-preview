@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Application CI builds artifacts and proposes a draft infra PR; it never deploys.
+# Application CI builds artifacts and proposes an infra pin PR; it never deploys.
 set -euo pipefail
 commit=$1
 image=$2
@@ -20,14 +20,14 @@ jq --arg commit "$commit" --arg image "$image" --arg sha "$(sha256sum "$artifact
 mv release.tmp releases/osrs-coord-preview.json
 git add releases
 git -c user.name=collisionlab-bot -c user.email=collisionlab-bot@users.noreply.github.com \
-  commit -qm "Pin coordinate preview ${commit:0:12}"
+  commit -qm "Deploy osrs-coord-preview ${commit:0:12}"
 git push -q origin "$branch"
 cat > "$work/body.md" <<EOF
 Pins the renderer image and matching Worker from collisionlab/osrs-coord-preview@$commit.
 
 Image: \`$image\`
 
-Review activation flags and the migration checklist before merging. This PR does not change them.
+Pins the immutable image and matching Worker bundle; preserves deployment flags, project and region.
 EOF
-gh pr create --draft --repo collisionlab/infra --head "$branch" \
-  --title "Pin coordinate preview ${commit:0:12}" --body-file "$work/body.md"
+gh pr create --repo collisionlab/infra --head "$branch" \
+  --title "Deploy osrs-coord-preview ${commit:0:12}" --body-file "$work/body.md"

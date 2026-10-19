@@ -41,7 +41,7 @@ export function deriveId(item: CoordinateItemInput, index: number): string {
 
 export function parseCoordinateItems(raw: string): CoordinateItem[] {
   if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) throw new Error("Coordinates input is too large");
-  // The action and CLI share one JSON contract so upstream workflow steps and local
+  // The HTTP service and CLI share one JSON contract so upstream workflow steps and local
   // testing use the exact same payload shape.
   let parsed: unknown;
   try {

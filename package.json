@@ -1,8 +1,8 @@
 {
-  "name": "osrs-coordinate-preview",
+  "name": "osrs-coord-preview",
   "version": "0.1.0",
   "private": true,
-  "description": "GitHub Action and CLI for rendering OSRS coordinate previews.",
+  "description": "Sharp renderer, HTTP service and local CLI for OSRS coordinate previews.",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -11,14 +11,12 @@
     "build": "tsc -p tsconfig.json && npm run bundle",
     "clean": "rm -rf dist .osrs-coordinate-preview .osrs-coordinate-preview-direct .cloud-run-public",
     "start": "node dist/src/server.js",
-    "test": "node --test --import tsx test/*.test.ts test/*.test.mjs",
+    "test": "node --test --import tsx test/*.test.ts",
     "cli": "tsx src/cli.ts",
     "serve": "tsx src/server.ts",
-    "bundle": "esbuild src/main.ts --bundle --platform=node --format=cjs --target=node24 --outfile=action-dist/main.cjs && esbuild src/worker.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=worker-dist/worker.js"
+    "bundle": "esbuild src/worker.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=worker-dist/worker.js"
   },
   "dependencies": {
-    "@actions/core": "^1.11.1",
-    "@actions/github": "^9.1.1",
     "@aws-sdk/client-s3": "^3.1152.0",
     "sharp": "^0.35.5"
   },
