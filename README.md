@@ -10,7 +10,7 @@ permissions:
   contents: read
   pull-requests: write # only needed for comment: true
 steps:
-  - uses: collisionlab/osrs-coord-preview@v1 # publish this tag after the acceptance gate
+  - uses: collisionlab/osrs-coord-preview-action@v1.5.0-rc.1 # candidate; public API activation is pending
     with:
       coordinates: >-
         [{"coordinate":"3222/3218/0","id":"gate","label":"Lumbridge gate","source":"steps.json:4"},
@@ -19,7 +19,13 @@ steps:
       github-token: ${{ github.token }}
 ```
 
-Existing inputs (`coordinates`, `comment`, `renderer-url`, `github-token`,
+The [standalone client](https://github.com/collisionlab/osrs-coord-preview-action)
+is the migration target for existing standalone consumers. It additionally retains
+`coordinates-file`, `pr-number`, `comment_body_path` and `summary_path`, plus the
+existing composite comment action and default GitHub token handling. Use its
+`renderer-url` override for acceptance testing until the public API is activated.
+
+The embedded Action in this renderer repository retains its inputs (`coordinates`, `comment`, `renderer-url`, `github-token`,
 `output-dir`), outputs (`manifest_path`, `render_count`, `failed_count`) and
 `<!-- osrs-coordinate-preview -->` comment marker are preserved. The Action
 bundles all JavaScript dependencies in `action-dist/main.cjs`; consumers do not
