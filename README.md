@@ -1,36 +1,24 @@
 # OSRS coordinate preview
 
-CollisionLab GitHub Action, local CLI and Sharp renderer for OSRS coordinate batches.
-The public API is `POST https://tiles.collisionlab.world/previews/v1/render`;
-PNGs live at `/previews/images/<sha256>.png`. Infrastructure activation is a
-separate reviewed release: see [migration.md](migration.md) for current status.
+Sharp renderer and local CLI for pinned CollisionLab map imagery. The stable HTTP
+interface is a Cloudflare Worker: `POST https://tiles.collisionlab.world/previews/v1/render`.
+Images use `https://tiles.collisionlab.world/previews/images/<sha256>.png`.
+The Worker reads R2 first and sends cache misses to authenticated Google Cloud Run.
 
-```yaml
-permissions:
-  contents: read
-  pull-requests: write # only needed for comment: true
-steps:
-  - uses: collisionlab/osrs-coord-preview-action@v1.5.0-rc.1 # candidate; public API activation is pending
-    with:
-      coordinates: >-
-        [{"coordinate":"3222/3218/0","id":"gate","label":"Lumbridge gate","source":"steps.json:4"},
-         {"coordinate":"3207/3210/2","label":"Upper floor","style":"tactical"}]
-      comment: 'true'
-      github-token: ${{ github.token }}
+The canonical published GitHub Action is
+[collisionlab/osrs-coord-preview-action](https://github.com/collisionlab/osrs-coord-preview-action).
+This repository owns the renderer, API, Worker bundle and local CLI.
+
+```sh
+curl --fail https://tiles.collisionlab.world/previews/v1/render \
+  -H 'content-type: application/json' \
+  -d '[{"coordinate":"3222/3218/0","label":"Lumbridge"}]'
 ```
 
-The [standalone client](https://github.com/collisionlab/osrs-coord-preview-action)
-is the migration target for existing standalone consumers. It additionally retains
-`coordinates-file`, `pr-number`, `comment_body_path` and `summary_path`, plus the
-existing composite comment action and default GitHub token handling. Use its
-`renderer-url` override for acceptance testing until the public API is activated.
-
-For the embedded Action in this renderer repository, inputs (`coordinates`, `comment`, `renderer-url`, `github-token`,
-`output-dir`), outputs (`manifest_path`, `render_count`, `failed_count`) and
-`<!-- osrs-coordinate-preview -->` comment marker are preserved. The Action
-bundles all JavaScript dependencies in `action-dist/main.cjs`; consumers do not
-install packages or receive storage credentials. It uses GitHub's Node 24 runtime.
-`renderer-url` remains available for testing and staged migration.
+The response contains `renderCount`, `failedCount` and ordered `items`. Successful
+items include `status: "success"` and `imageUrl`; failed items include an `error`.
+Labels, IDs and sources round-trip without affecting image identity. Routing is
+activated separately through infra's release manifest.
 
 ## Local rendering
 
@@ -88,25 +76,42 @@ change. Update real-map fixtures only by downloading immutable versions and
 recording their SHA-256 in `test/source/sources.json`. To deliberately regenerate
 goldens, run `UPDATE_GOLDEN=1 npm test` and review the image differences.
 
-## Hosted build
+## Cloud Run and R2
 
-The application produces a non-root Node container and a small Worker bundle.
-Cloud Run checks R2 with HEAD before fetching source imagery or invoking Sharp,
-then uploads each complete PNG with an atomic S3 PUT. Concurrent misses may do
-redundant work but publish the same deterministic complete object; no locks,
-database or queue are required. Temporary rendering directories are removed.
-The Worker checks R2 first, authenticates misses to Cloud Run, serves PNGs through
-its R2 binding and Cache API, and never composes images.
+Cloud Run runs the non-root Node/Sharp container with scale-to-zero, at most two
+instances, one request per instance, 1 CPU, 1 GiB RAM and a 60-second timeout.
+`GET /health` checks process liveness without fetching tiles. Rendering requires
+`Authorization: Bearer <ORIGIN_TOKEN>`; the Worker supplies it on cache misses.
+The Worker limits clients to 30 batches per minute. PNG delivery uses immutable
+one-year caching, R2 and the edge cache. Concurrent misses can publish the same
+complete object; temporary directories are removed after rendering.
 
-Cloud Run needs `R2_BUCKET`, `R2_ENDPOINT`, `AWS_ACCESS_KEY_ID`,
-`AWS_SECRET_ACCESS_KEY`, and `ORIGIN_TOKEN`, supplied by infra/Secret Manager.
-`PUBLIC_BASE_URL` optionally overrides the image URL prefix. A standalone local
-HTTP server can use `PUBLISH_MODE=local`, `LOCAL_PUBLISH_DIR` and
-`PUBLIC_BASE_URL=http://127.0.0.1:8080/static`, then `npm run serve`. Production
-never uses local mode. Source endpoints and version pins are build-time inputs,
-not public HTTP options.
+Infra supplies `R2_BUCKET`, `R2_ENDPOINT`, `AWS_ACCESS_KEY_ID`,
+`AWS_SECRET_ACCESS_KEY` and `ORIGIN_TOKEN` through Secret Manager.
+`PUBLIC_BASE_URL` optionally overrides the PNG URL prefix. For local HTTP testing,
+set `PUBLISH_MODE=local`, `LOCAL_PUBLISH_DIR` and
+`PUBLIC_BASE_URL=http://127.0.0.1:8080/static`, then `npm run serve`.
+Source tile endpoints and versions are build-time inputs, not public HTTP options.
 
-CI builds/tests, checks the committed Action bundle, builds a container and opens
-a **draft** infra PR pinning the container digest and matching Worker bytes.
-Application CI does not deploy. The renderer image must be public in GHCR so
-infra's Artifact Registry remote can cache it for Cloud Run.
+## Releases and checks
+
+CI runs through Nix on main and PRs. PRs test the container build; each main release
+publishes one immutable GHCR image and the Worker bundle. `scripts/pin-release`
+opens `pin/osrs-coord-preview-<sha12>` in infra, titled
+`Deploy osrs-coord-preview <sha12>`, and pins the image, commit and Worker SHA-256.
+It preserves project, region and deployment controls. Infra validates the matching
+bundle/hash and OpenTofu plan before merging a trusted non-draft bot pin.
+Artifact Registry caches the public GHCR image for Cloud Run.
+
+`osrs-tiles` proposes `tiles.json` updates for both this repo and the planner.
+Trusted non-draft tile pins merge only after tests; draft pins wait for review.
+Tests cover geometry, every plane/style, real-map goldens, deterministic identity,
+partial failures, signed R2 requests and Worker miss/publication/cache-hit paths.
+
+Infra runs `scripts/smoke-origin.ts` against the deployed revision with managed
+credentials: authentication rejection, a confirmed cache miss, Sharp rendering,
+R2 upload/download and repeated identity. When public routing is active it also
+checks the Worker miss path and public PNG delivery. This is separate from
+`/health` and cached uptime checks. See
+[infra operations](https://github.com/collisionlab/infra/blob/main/docs/coordinate-previews.md)
+for deployment, monitoring, secrets and rollback.
