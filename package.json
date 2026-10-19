@@ -11,7 +11,7 @@
     "build": "tsc -p tsconfig.json && npm run bundle",
     "clean": "rm -rf dist .osrs-coordinate-preview .osrs-coordinate-preview-direct .cloud-run-public",
     "start": "node dist/src/server.js",
-    "test": "node --test --import tsx test/*.test.ts",
+    "test": "node --test --import tsx test/*.test.ts test/*.test.mjs",
     "cli": "tsx src/cli.ts",
     "serve": "tsx src/server.ts",
     "bundle": "esbuild src/main.ts --bundle --platform=node --format=cjs --target=node24 --outfile=action-dist/main.cjs && esbuild src/worker.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=worker-dist/worker.js"

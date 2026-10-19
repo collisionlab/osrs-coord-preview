@@ -17,7 +17,7 @@ test("bundled Action executes without node_modules and writes the existing manif
     await once(server,"listening");
     await fs.copyFile("action-dist/main.cjs",path.join(temp,"main.cjs"));
     const env={...process.env,INPUT_COORDINATES:'[{"coordinate":"3200/3200/0"}]',INPUT_COMMENT:"false",
-      "INPUT_RENDERER-URL":`http://127.0.0.1:${(server.address() as any).port}/render`,"INPUT_OUTPUT-DIR":path.join(temp,"out"),
+      "INPUT_RENDERER-URL":`http://127.0.0.1:${server.address().port}/render`,"INPUT_OUTPUT-DIR":path.join(temp,"out"),
       GITHUB_STEP_SUMMARY:path.join(temp,"summary"),GITHUB_OUTPUT:path.join(temp,"outputs")};
     await fs.writeFile(env.GITHUB_STEP_SUMMARY,"");await fs.writeFile(env.GITHUB_OUTPUT,"");
     const child=spawn(process.execPath,[path.join(temp,"main.cjs")],{cwd:temp,env,stdio:["ignore","pipe","pipe"]});
