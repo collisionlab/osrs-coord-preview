@@ -14,7 +14,7 @@ const post = (url: string, body: string, token?: string) => fetch(url, {
   method: "POST", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
   body, signal: AbortSignal.timeout(60000), redirect: "error"
 });
-assert.equal((await fetch(new URL("/health", origin))).status, 200);
+assert.equal((await fetch(new URL("/health", origin), { signal: AbortSignal.timeout(60000) })).status, 200);
 for (const token of [undefined, "incorrect"])
   assert.equal((await post(origin, '[]', token)).status, 401, "Origin must reject invalid credentials");
 const store = imageStore();
