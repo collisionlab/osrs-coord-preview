@@ -10,4 +10,3 @@ export function resolveTileCoordinate(x: number, y: number): TileCoordinate {
     pixelY: (63 - y % 64) * SCALE + SCALE / 2
   };
 }
-
