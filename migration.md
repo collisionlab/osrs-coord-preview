@@ -44,14 +44,15 @@ released-Action execution and historical GCS inventory remain release gates.
    already support the app's initial pin; no old tile version is modified. New
    sidecars publish through existing CI with their completion manifest last.
 2. Review the infra additions with activation flags false. Provision the separate
-   R2 bucket/token and origin secret through normal CI only. Add a least-privileged
-   GCP deploy credential to SOPS `secrets/bootstrap.yaml` as
-   `gcp_preview_credentials` (JSON); give it Cloud Run, project service usage,
-   Artifact Registry, service account creation/use, Secret Manager and monitoring
-   management permissions in the selected existing project. Reuse the current
-   project initially; creating/billing a project is an operator decision. No key
-   or deployment permission goes to application CI. Prefer the organisation's WIF
-   bootstrap when available instead of expanding this into app-owned IAM setup.
+   R2 bucket/token and origin secret through normal CI only. The existing project
+   is `osrs-coordinate-preview`, region `europe-west2`. Bootstrap keyless GitHub
+   OIDC with infra's operator-applied `tofu/gcp-identity` root, then publish its
+   non-secret provider identifier through `tofu/github`. Infra CI exchanges its
+   GitHub identity for short-lived Google credentials; no service-account JSON
+   key goes into SOPS, application CI or Action consumers. See infra's
+   [bootstrap and recovery procedure](https://github.com/collisionlab/infra/blob/main/docs/coordinate-previews.md).
+   Normal renderer deployment remains owned by `tofu/previews` and infra CI.
+
 3. Per the migration instruction, create the new public repository
    `collisionlab/osrs-coord-preview` and seed `main` with the original repository's
    history before opening the migration PR. Keep `mpickering/osrs-coord-preview`
@@ -75,12 +76,18 @@ released-Action execution and historical GCS inventory remain release gates.
    Worker logs for cache hits (no Cloud Run request) and mixed-failure batches.
    If path routing does not coexist, revert the route PR and investigate; do not
    replace the R2 custom domain or add a whole-host Worker without review.
-7. Publish an immutable Action release/tag containing `action.yml` and the checked-in
-   `action-dist/main.cjs`. Run `osrs-tiles`'s manual
-   `coordinate-preview-consumer` workflow with that exact release revision: it
-   checks out the external Action and runs it without `npm install`. Exercise
-   the opt-in `test-pr-comment` workflow in an actual PR to verify create/update
-   with the unchanged comment marker. Update consumer pins only after both pass.
+7. Migrate the separate `mpickering/osrs-coord-preview-action` client, preserving
+   its history/tags, to `collisionlab/osrs-coord-preview-action`. It retains file
+   input, explicit PR targeting and markdown outputs that the embedded renderer
+   Action does not expose. Publish a candidate containing `action.yml` and the
+   self-contained `dist/index.js` bundle. Run `osrs-tiles`'s manual
+   `coordinate-preview-consumer` workflow with repository
+   `collisionlab/osrs-coord-preview-action` and that exact candidate revision:
+   it loads the released Action without `npm install`. Run the standalone
+   client's manual PR-comment workflow to verify one comment is created and
+   updated with the unchanged marker/tag. Update consumer pins and move `v1`
+   only after both and the live API pass. Retain the renderer's embedded Action
+   and old standalone tags for compatibility.
 8. Validate planner tile loads/insets and legacy previews in real consumers.
    Record revision, workflow links, sample image URLs and the acceptance results.
    Only then approve retirement of the old compute deployment.
