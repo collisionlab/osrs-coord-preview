@@ -25,7 +25,7 @@ is the migration target for existing standalone consumers. It additionally retai
 existing composite comment action and default GitHub token handling. Use its
 `renderer-url` override for acceptance testing until the public API is activated.
 
-The embedded Action in this renderer repository retains its inputs (`coordinates`, `comment`, `renderer-url`, `github-token`,
+For the embedded Action in this renderer repository, inputs (`coordinates`, `comment`, `renderer-url`, `github-token`,
 `output-dir`), outputs (`manifest_path`, `render_count`, `failed_count`) and
 `<!-- osrs-coordinate-preview -->` comment marker are preserved. The Action
 bundles all JavaScript dependencies in `action-dist/main.cjs`; consumers do not
