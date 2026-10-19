@@ -44,14 +44,15 @@ released-Action execution and historical GCS inventory remain release gates.
    already support the app's initial pin; no old tile version is modified. New
    sidecars publish through existing CI with their completion manifest last.
 2. Review the infra additions with activation flags false. Provision the separate
-   R2 bucket/token and origin secret through normal CI only. Add a least-privileged
-   GCP deploy credential to SOPS `secrets/bootstrap.yaml` as
-   `gcp_preview_credentials` (JSON); give it Cloud Run, project service usage,
-   Artifact Registry, service account creation/use, Secret Manager and monitoring
-   management permissions in the selected existing project. Reuse the current
-   project initially; creating/billing a project is an operator decision. No key
-   or deployment permission goes to application CI. Prefer the organisation's WIF
-   bootstrap when available instead of expanding this into app-owned IAM setup.
+   R2 bucket/token and origin secret through normal CI only. The existing project
+   is `osrs-coordinate-preview`, region `europe-west2`. Bootstrap keyless GitHub
+   OIDC with infra's operator-applied `tofu/gcp-identity` root, then publish its
+   non-secret provider identifier through `tofu/github`. Infra CI exchanges its
+   GitHub identity for short-lived Google credentials; no service-account JSON
+   key goes into SOPS, application CI or Action consumers. See infra's
+   [bootstrap and recovery procedure](https://github.com/collisionlab/infra/blob/main/docs/coordinate-previews.md).
+   Normal renderer deployment remains owned by `tofu/previews` and infra CI.
+
 3. Per the migration instruction, create the new public repository
    `collisionlab/osrs-coord-preview` and seed `main` with the original repository's
    history before opening the migration PR. Keep `mpickering/osrs-coord-preview`
