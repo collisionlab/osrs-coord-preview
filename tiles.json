@@ -1,0 +1,12 @@
+{
+  "base": "https://tiles.collisionlab.world",
+  "version": "2740-8acf5d122b49",
+  "styles": [
+    "standard",
+    "tactical"
+  ],
+  "insets": {
+    "version": "51fe5e2dd34333f5f39380df",
+    "tileVersion": "2740-8acf5d122b49"
+  }
+}

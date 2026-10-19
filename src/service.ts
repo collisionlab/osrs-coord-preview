@@ -1,98 +1,64 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { Storage } from "@google-cloud/storage";
+import { S3Client, HeadObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { parseCoordinateItems } from "./input.js";
-import { renderBatch } from "./render.js";
-import { RenderManifest, RenderResult, RenderServiceResponse, RenderSuccess } from "./types.js";
+import { renderBatch, resolveTileCoordinate } from "./render.js";
+import { CACHE_CONTROL, objectKey } from "./config.js";
+import type { RenderOptions, RenderResult, RenderServiceResponse } from "./types.js";
 
-interface ServiceConfig {
-  publishMode: "gcs" | "local";
-  bucketName?: string;
-  publicBaseUrl?: string;
-  localPublishDir?: string;
+export interface ImageStore {
+  has(key: string): Promise<boolean>;
+  put(key: string, image: Uint8Array): Promise<void>;
+}
+export function imageStore(): ImageStore {
+  if (process.env.PUBLISH_MODE === "local") {
+    const dir = process.env.LOCAL_PUBLISH_DIR;
+    if (!dir) throw new Error("LOCAL_PUBLISH_DIR is required");
+    return {
+      async has(key) { try { await fs.access(path.join(dir, key)); return true; } catch (e) { if ((e as NodeJS.ErrnoException).code === "ENOENT") return false; throw e; } },
+      async put(key, bytes) {
+        await fs.mkdir(dir, { recursive: true });
+        const temp = await fs.mkdtemp(path.join(dir, ".upload-"));
+        try { await fs.writeFile(path.join(temp, key), bytes); await fs.rename(path.join(temp, key), path.join(dir, key)); }
+        finally { await fs.rm(temp, { recursive: true, force: true }); }
+      }
+    };
+  }
+  const Bucket = process.env.R2_BUCKET;
+  if (!Bucket || !process.env.R2_ENDPOINT || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY)
+    throw new Error("R2 upload configuration is required");
+  const client = new S3Client({ region: "auto", endpoint: process.env.R2_ENDPOINT, requestChecksumCalculation: "WHEN_REQUIRED" });
+  return {
+    async has(Key) {
+      try { await client.send(new HeadObjectCommand({ Bucket, Key })); return true; }
+      catch (error) { if ((error as { $metadata?: { httpStatusCode: number } }).$metadata?.httpStatusCode === 404) return false; throw error; }
+    },
+    async put(Key, Body) { await client.send(new PutObjectCommand({ Bucket, Key, Body, ContentType: "image/png", CacheControl: CACHE_CONTROL })); }
+  };
 }
 
-export async function handleRenderRequest(rawBody: string): Promise<RenderServiceResponse> {
+export async function handleRenderRequest(rawBody: string, store = imageStore(), options: Partial<RenderOptions> = {}): Promise<RenderServiceResponse> {
   const items = parseCoordinateItems(rawBody);
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "osrs-render-"));
-  const manifest = await renderBatch(items, { outputDir: tempDir });
-  const config = loadServiceConfig();
-
-  for (const item of manifest.items) {
-    if (item.status !== "success") {
-      continue;
+  const temp = await fs.mkdtemp(path.join(os.tmpdir(), "osrs-render-"));
+  const results: RenderResult[] = [];
+  const base = (process.env.PUBLIC_BASE_URL ?? "https://tiles.collisionlab.world/previews/images").replace(/\/+$/, "");
+  try {
+    for (const item of items) {
+      try {
+        const config = { ...options, style: item.style ?? options.style };
+        const key = await objectKey(item, config);
+        if (!await store.has(key)) {
+          const rendered = (await renderBatch([item], { ...config, outputDir: temp })).items[0];
+          if (rendered.status === "failure") { results.push(rendered); continue; }
+          await store.put(key, await fs.readFile(rendered.imagePath!));
+        }
+        results.push({ status: "success", id: item.id, label: item.label, source: item.source,
+          coordinate: item.coordinate, resolved: resolveTileCoordinate(item.parsed.x, item.parsed.y), imageUrl: `${base}/${key}` });
+      } catch (error) {
+        results.push({ status: "failure", id: item.id, label: item.label, source: item.source, coordinate: item.coordinate, error: (error as Error).message });
+      }
     }
-    item.imageUrl = await publishRenderedImage(item, rawBody, config);
-    delete item.imagePath;
-    delete item.imageName;
-  }
-
-  return {
-    renderCount: manifest.renderCount,
-    failedCount: manifest.failedCount,
-    items: manifest.items
-  };
-}
-
-function loadServiceConfig(): ServiceConfig {
-  const publishMode = process.env.PUBLISH_MODE === "local" ? "local" : "gcs";
-  return {
-    publishMode,
-    bucketName: process.env.GCS_BUCKET,
-    publicBaseUrl: process.env.PUBLIC_BASE_URL,
-    localPublishDir: process.env.LOCAL_PUBLISH_DIR
-  };
-}
-
-async function publishRenderedImage(item: RenderSuccess, rawBody: string, config: ServiceConfig): Promise<string> {
-  if (!item.imagePath || !item.imageName) {
-    throw new Error(`Rendered image missing local path for ${item.id}`);
-  }
-
-  const objectName = buildObjectName(item, rawBody);
-  if (config.publishMode === "local") {
-    if (!config.localPublishDir || !config.publicBaseUrl) {
-      throw new Error("LOCAL_PUBLISH_DIR and PUBLIC_BASE_URL are required for local publish mode.");
-    }
-    const destination = path.join(config.localPublishDir, objectName);
-    await fs.mkdir(path.dirname(destination), { recursive: true });
-    await fs.copyFile(item.imagePath, destination);
-    return `${trimTrailingSlash(config.publicBaseUrl)}/${objectName}`;
-  }
-
-  if (!config.bucketName) {
-    throw new Error("GCS_BUCKET is required for GCS publish mode.");
-  }
-
-  const storage = new Storage();
-  const bucket = storage.bucket(config.bucketName);
-  await bucket.upload(item.imagePath, {
-    destination: objectName,
-    metadata: {
-      contentType: "image/png",
-      cacheControl: "public, max-age=31536000, immutable"
-    }
-  });
-  return `https://storage.googleapis.com/${config.bucketName}/${objectName}`;
-}
-
-function buildObjectName(item: RenderSuccess, rawBody: string): string {
-  const payloadHash = BunHash.hash(`${rawBody}:${item.id}`);
-  return `renders/${payloadHash}/${item.id}.png`;
-}
-
-function trimTrailingSlash(value: string): string {
-  return value.replace(/\/+$/, "");
-}
-
-class BunHash {
-  static hash(value: string): string {
-    let hash = 2166136261;
-    for (let index = 0; index < value.length; index += 1) {
-      hash ^= value.charCodeAt(index);
-      hash = Math.imul(hash, 16777619);
-    }
-    return (hash >>> 0).toString(16);
-  }
+    return { renderCount: results.filter(r => r.status === "success").length, failedCount: results.filter(r => r.status === "failure").length, items: results };
+  } finally { await fs.rm(temp, { recursive: true, force: true }); }
 }

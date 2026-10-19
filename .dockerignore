@@ -1,0 +1,6 @@
+.git
+node_modules
+dist
+action-dist
+worker-dist
+test

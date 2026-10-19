@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
-import sharp from "sharp";
+import { fixtureFetch } from "./fixtures.js";
 import { parseCliArgs, runCli } from "../src/cli.js";
 
 test("parseCliArgs parses standard options", () => {
@@ -26,15 +26,7 @@ test("runCli renders a local manifest", async () => {
   const originalStdoutWrite = process.stdout.write.bind(process.stdout);
   const originalStderrWrite = process.stderr.write.bind(process.stderr);
 
-  globalThis.fetch = async () => {
-    const buffer = await sharp({
-      create: { width: 256, height: 256, channels: 4, background: "#00ff00" }
-    }).png().toBuffer();
-    return new Response(new Uint8Array(buffer), {
-      status: 200,
-      headers: { "content-type": "image/png" }
-    });
-  };
+  globalThis.fetch = await fixtureFetch();
 
   process.stdout.write = (() => true) as typeof process.stdout.write;
   process.stderr.write = (() => true) as typeof process.stderr.write;

@@ -3,3 +3,5 @@ node_modules/
 .osrs-coordinate-preview-direct/
 .osrs-coordinate-preview-smoke/
 .cloud-run-public/
+dist/
+worker-dist/

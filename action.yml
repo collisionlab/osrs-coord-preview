@@ -11,7 +11,7 @@ inputs:
   renderer-url:
     description: Full URL of the remote render endpoint.
     required: false
-    default: https://osrs-coordinate-preview-nt7ywvsdgq-nw.a.run.app/render
+    default: https://tiles.collisionlab.world/previews/v1/render
   github-token:
     description: GitHub token used for optional pull request commenting.
     required: false
@@ -27,5 +27,5 @@ outputs:
   failed_count:
     description: Number of failed preview renders.
 runs:
-  using: node20
-  main: dist/src/main.js
+  using: node24
+  main: action-dist/main.cjs

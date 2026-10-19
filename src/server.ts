@@ -1,73 +1,59 @@
 import fs from "node:fs/promises";
 import http, { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
+import { timingSafeEqual } from "node:crypto";
+import sharp from "sharp";
 import { handleRenderRequest } from "./service.js";
+import { CACHE_CONTROL, MAX_BODY_BYTES } from "./config.js";
+import { parseCoordinateItems } from "./input.js";
 
-const DEFAULT_PORT = 8080;
-
-async function requestListener(req: IncomingMessage, res: ServerResponse) {
-  try {
-    const url = new URL(req.url ?? "/", "http://127.0.0.1");
-
-    if (req.method === "GET" && url.pathname === "/health") {
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ ok: true }));
-      return;
-    }
-
-    if (req.method === "GET" && url.pathname.startsWith("/static/")) {
-      await serveStatic(url.pathname.replace("/static/", ""), res);
-      return;
-    }
-
-    if (req.method === "POST" && url.pathname === "/render") {
-      const body = await readBody(req);
-      const response = await handleRenderRequest(body);
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify(response));
-      return;
-    }
-
-    res.writeHead(404, { "content-type": "application/json" });
-    res.end(JSON.stringify({ error: "Not found" }));
-  } catch (error) {
-    res.writeHead(500, { "content-type": "application/json" });
-    res.end(JSON.stringify({ error: (error as Error).message }));
-  }
-}
-
-async function serveStatic(relativePath: string, res: ServerResponse) {
-  const publishDir = process.env.LOCAL_PUBLISH_DIR;
-  if (!publishDir) {
-    res.writeHead(404, { "content-type": "application/json" });
-    res.end(JSON.stringify({ error: "LOCAL_PUBLISH_DIR is not configured" }));
+sharp.concurrency(1);
+sharp.cache(false);
+let outstanding = 0;
+const reply = (res: ServerResponse, status: number, value: unknown) => {
+  res.writeHead(status, { "content-type": "application/json", "cache-control": "no-store" }); res.end(JSON.stringify(value));
+};
+export async function requestListener(req: IncomingMessage, res: ServerResponse) {
+  const url = new URL(req.url ?? "/", "http://localhost");
+  if (req.method === "GET" && url.pathname === "/health") { reply(res, 200, { ok: true }); return; }
+  const local = process.env.PUBLISH_MODE === "local";
+  if (local && req.method === "GET" && /^\/static\/[a-f0-9]{64}\.png$/.test(url.pathname)) {
+    try {
+      const bytes = await fs.readFile(path.join(process.env.LOCAL_PUBLISH_DIR!, path.basename(url.pathname)));
+      res.writeHead(200, { "content-type": "image/png", "cache-control": CACHE_CONTROL }); res.end(bytes);
+    } catch { reply(res, 404, { error: "Not found" }); }
     return;
   }
-
-  const filePath = path.resolve(publishDir, relativePath);
-  const file = await fs.readFile(filePath);
-  res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=31536000, immutable" });
-  res.end(file);
-}
-
-async function readBody(req: IncomingMessage): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  if (url.pathname !== "/render") { reply(res, 404, { error: "Not found" }); return; }
+  if (req.method !== "POST") { res.setHeader("allow", "POST"); reply(res, 405, { error: "Method not allowed" }); return; }
+  if (!local) {
+    const expected = Buffer.from(`Bearer ${process.env.ORIGIN_TOKEN ?? ""}`), actual = Buffer.from(req.headers.authorization ?? "");
+    if (!process.env.ORIGIN_TOKEN || expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+      reply(res, 401, { error: "Unauthorized" }); return;
+    }
   }
-  return Buffer.concat(chunks).toString("utf8");
+  if (outstanding >= 2) { res.setHeader("retry-after", "5"); reply(res, 429, { error: "Renderer busy" }); return; }
+  if (req.headers["content-type"]?.split(";")[0].trim() !== "application/json") { reply(res, 415, { error: "Expected application/json" }); return; }
+  outstanding++;
+  try {
+    let bytes = 0;
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      bytes += chunk.length;
+      if (bytes > MAX_BODY_BYTES) { reply(res, 413, { error: "Input too large" }); return; }
+      chunks.push(Buffer.from(chunk));
+    }
+    const raw = Buffer.concat(chunks).toString("utf8");
+    try { parseCoordinateItems(raw); } catch (error) { reply(res, 400, { error: (error as Error).message }); return; }
+    reply(res, 200, await handleRenderRequest(raw));
+  } catch { reply(res, 500, { error: "Rendering unavailable" }); }
+  finally { outstanding--; }
 }
-
-export function startServer(port = DEFAULT_PORT) {
-  const server = http.createServer((req, res) => {
-    void requestListener(req, res);
-  });
+export function startServer(port = 8080) {
+  const server = http.createServer((req, res) => { void requestListener(req, res); });
+  server.requestTimeout = 30000;
+  server.headersTimeout = 10000;
   server.listen(port);
   return server;
 }
-
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const port = Number.parseInt(process.env.PORT ?? `${DEFAULT_PORT}`, 10);
-  startServer(port);
-  process.stdout.write(`Renderer listening on ${port}\n`);
-}
+if (import.meta.url === `file://${process.argv[1]}`) startServer(Number(process.env.PORT ?? 8080));
