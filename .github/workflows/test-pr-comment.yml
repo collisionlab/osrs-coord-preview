@@ -21,23 +21,23 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
+      - name: Build action and Worker
+        run: npm run build
 
       - name: Run tests
         run: npm test
-
-      - name: Build action
-        run: npm run build
 
       - name: Run action with PR comment enabled
         uses: ./
         with:
           coordinates: >-
-            [{"coordinate":"2701/3408/0","label":"Test coordinate","source":"label:test-pr-comment:1"},{"coordinate":"3222/3218/0","label":"Lumbridge gate","source":"label:test-pr-comment:2"},{"coordinate":"2701/3408/5","label":"Invalid plane","source":"label:test-pr-comment:3"}]
+            [{"coordinate":"2701/3408/0","label":"Test coordinate","source":"label:test-pr-comment:1"},{"coordinate":"3222/3218/0","label":"Lumbridge gate","source":"label:test-pr-comment:2"},{"coordinate":"2701/3408/3","label":"Upper plane","source":"label:test-pr-comment:3"}]
           comment: "true"
-          renderer-url: https://osrs-coordinate-preview-nt7ywvsdgq-nw.a.run.app/render
+          renderer-url: https://tiles.collisionlab.world/previews/v1/render
           github-token: ${{ github.token }}

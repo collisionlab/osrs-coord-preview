@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import * as core from "@actions/core";
 import { postOrUpdateComment } from "./comment.js";
-import { parseCoordinateItems, resolveOutputDir } from "./input.js";
+import { parseCoordinateItems } from "./input.js";
 import { RenderManifest, RenderServiceResponse } from "./types.js";
 
 export interface ActionOptions {
@@ -18,7 +18,7 @@ export async function runAction(options: ActionOptions): Promise<void> {
   // outputs, and optional PR commenting.
   parseCoordinateItems(options.coordinatesRaw);
 
-  const outputDir = resolveOutputDir(options.outputDir);
+  const outputDir = path.resolve(options.outputDir);
   await fs.mkdir(outputDir, { recursive: true });
 
   const manifest = await requestRemoteRender(options.rendererUrl, options.coordinatesRaw);

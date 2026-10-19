@@ -5,27 +5,28 @@
   "description": "GitHub Action and CLI for rendering OSRS coordinate previews.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && npm run bundle",
     "clean": "rm -rf dist .osrs-coordinate-preview .osrs-coordinate-preview-direct .cloud-run-public",
-    "gcp-build": "npm run build",
     "start": "node dist/src/server.js",
-    "test": "node --test --import tsx test/*.test.ts",
+    "test": "node --test --import tsx test/*.test.ts test/*.test.mjs",
     "cli": "tsx src/cli.ts",
-    "serve": "tsx src/server.ts"
+    "serve": "tsx src/server.ts",
+    "bundle": "esbuild src/main.ts --bundle --platform=node --format=cjs --target=node24 --outfile=action-dist/main.cjs && esbuild src/worker.ts --bundle --format=esm --platform=browser --target=es2022 --outfile=worker-dist/worker.js"
   },
   "dependencies": {
     "@actions/core": "^1.11.1",
-    "@actions/github": "^6.0.1",
-    "@google-cloud/storage": "^7.16.0",
-    "node-addon-api": "^8.5.0",
-    "sharp": "^0.34.2"
+    "@actions/github": "^9.1.1",
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261019.1",
     "@types/node": "^24.0.0",
-    "node-gyp": "^11.2.0",
+    "esbuild": "^0.28.2",
+    "miniflare": "^4.20260730.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }

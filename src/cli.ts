@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { parseCoordinateItems, resolveOutputDir } from "./input.js";
+import { parseCoordinateItems } from "./input.js";
 import { renderBatch } from "./render.js";
 
 interface CliArgs {
@@ -9,6 +9,10 @@ interface CliArgs {
   coordinatesFile?: string;
   outputDir: string;
   debug: boolean;
+  tileBaseUrl?: string;
+  tileVersion?: string;
+  insetVersion?: string;
+  style?: "standard" | "tactical";
 }
 
 async function main() {
@@ -24,8 +28,9 @@ export async function runCli(argv: string[]): Promise<number> {
   const args = parseCliArgs(argv);
   const coordinatesRaw = await loadCoordinates(args);
   const items = parseCoordinateItems(coordinatesRaw);
-  const outputDir = resolveOutputDir(args.outputDir);
+  const outputDir = path.resolve(args.outputDir);
   const manifest = await renderBatch(items, {
+    ...args,
     outputDir,
     debug: args.debug,
     logger: (message) => process.stderr.write(`${message}\n`)
@@ -38,6 +43,10 @@ export function parseCliArgs(argv: string[]): CliArgs {
   const parsed = parseArgs({
     args: argv,
     options: {
+      "tile-base-url": { type: "string" },
+      "tile-version": { type: "string" },
+      "inset-version": { type: "string" },
+      style: { type: "string" },
       coordinates: {
         type: "string"
       },
@@ -57,6 +66,10 @@ export function parseCliArgs(argv: string[]): CliArgs {
   });
 
   const args: CliArgs = {
+    tileBaseUrl: parsed.values["tile-base-url"],
+    tileVersion: parsed.values["tile-version"],
+    insetVersion: parsed.values["inset-version"],
+    style: parsed.values.style as "standard" | "tactical" | undefined,
     coordinates: parsed.values.coordinates,
     coordinatesFile: parsed.values["coordinates-file"],
     outputDir: parsed.values["output-dir"] ?? ".osrs-coordinate-preview",

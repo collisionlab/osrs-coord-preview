@@ -17,14 +17,15 @@ test("buildCommentBody includes item metadata", () => {
         coordinate: "3200/3200/0",
         source: "steps.json:4",
         resolved: { tileX: 12, tileY: 12, pixelX: 128, pixelY: 127 },
-        imageUrl: "https://storage.googleapis.com/example-bucket/renders/hash/step-1.png"
+        imageUrl: "https://tiles.collisionlab.world/previews/images/hash.png"
       }
     ]
   };
 
   const body = buildCommentBody(manifest);
+  assert.match(body, /<!-- osrs-coordinate-preview -->/);
   assert.match(body, /OSRS coordinate previews/);
   assert.match(body, /3200\/3200\/0/);
   assert.match(body, /steps\.json:4/);
-  assert.match(body, /storage\.googleapis\.com\/example-bucket/);
+  assert.match(body, /tiles\.collisionlab\.world\/previews\/images/);
 });

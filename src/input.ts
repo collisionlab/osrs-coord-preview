@@ -1,5 +1,6 @@
-import path from "node:path";
 import { CoordinateItem, CoordinateItemInput, ParsedCoordinate } from "./types.js";
+
+import { MAX_BATCH, MAX_BODY_BYTES } from "./config.js";
 
 const COORDINATE_PATTERN = /^(-?\d+)\/(-?\d+)\/(-?\d+)$/;
 
@@ -14,6 +15,9 @@ export function parseCoordinate(coordinate: string): ParsedCoordinate {
     throw new Error(`Invalid coordinate "${coordinate}". Values must be integers.`);
   }
 
+  if (![x, y].every(n => Number.isSafeInteger(n) && n >= 0 && n < 16384) || plane < 0 || plane > 3) {
+    throw new Error("Coordinates must be 0..16383, plane 0..3");
+  }
   return { x, y, plane };
 }
 
@@ -36,6 +40,7 @@ export function deriveId(item: CoordinateItemInput, index: number): string {
 }
 
 export function parseCoordinateItems(raw: string): CoordinateItem[] {
+  if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) throw new Error("Coordinates input is too large");
   // The action and CLI share one JSON contract so upstream workflow steps and local
   // testing use the exact same payload shape.
   let parsed: unknown;
@@ -49,6 +54,7 @@ export function parseCoordinateItems(raw: string): CoordinateItem[] {
     throw new Error("The coordinates input must be a non-empty JSON array.");
   }
 
+  if (parsed.length > MAX_BATCH) throw new Error(`At most ${MAX_BATCH} coordinates are allowed`);
   const items = parsed.map((entry, index) => {
     if (!entry || typeof entry !== "object") {
       throw new Error(`Coordinate item ${index + 1} must be an object.`);
@@ -59,12 +65,18 @@ export function parseCoordinateItems(raw: string): CoordinateItem[] {
       throw new Error(`Coordinate item ${index + 1} must include a coordinate string.`);
     }
 
+    for (const field of ["id", "label", "source"] as const) {
+      if (item[field] !== undefined && (typeof item[field] !== "string" || item[field]!.length > 512))
+        throw new Error(`Invalid ${field}`);
+    }
+    if (item.style !== undefined && !["standard", "tactical"].includes(item.style)) throw new Error("Unsupported map style");
     const id = deriveId(item, index);
     return {
       coordinate: item.coordinate,
       id,
       label: item.label,
       source: item.source,
+      style: item.style,
       parsed: parseCoordinate(item.coordinate)
     };
   });
@@ -87,8 +99,4 @@ function findDuplicates(values: string[]): string[] {
     seen.add(value);
   }
   return [...duplicates];
-}
-
-export function resolveOutputDir(outputDir: string): string {
-  return path.resolve(process.cwd(), outputDir);
 }
