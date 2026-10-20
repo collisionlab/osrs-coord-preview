@@ -1,5 +1,4 @@
 import sharp from "sharp";
-export const square = (50 << 8) | 50;
 export async function fixtureFetch(): Promise<typeof fetch> {
   const tiles = new Map<string, Buffer>();
   for (const style of ["standard", "tactical"]) for (let plane = 0; plane < 4; plane++) {
@@ -13,13 +12,10 @@ export async function fixtureFetch(): Promise<typeof fetch> {
   }
   return async input => {
     const url = String(input);
-    if (url.endsWith("/manifest.json")) return Response.json(url.includes("/insets/") ? {
-      tileVersion: "2740-8acf5d122b49", layout: "explv-tms-v1", cacheIdx255Sha256: "fixture",
-      supplementalStyles: { standard: "planes-standard", tactical: "planes" }, supplemental: [[], [square], [square], [square]]
-    } : { plane: 0, layout: "explv-tms-v1", cacheIdx255Sha256: "fixture" });
-    if (url.endsWith("/index.json")) return Response.json({ "8/35/31.png": "fixture" });
-    const plane = Number(/\/planes(?:-standard)?\/([0-3])\//.exec(url)?.[1] ?? 0);
-    const style = url.includes("/standard/") || url.includes("/planes-standard/") ? "standard" : "tactical";
+    if (url.endsWith("/manifest.json")) return Response.json({ layout: "explv-tms-v1", planes: [{}, {}, {}, {}] });
+    if (url.endsWith("/index.json")) return Response.json(Object.fromEntries(["", "p1/", "p2/", "p3/"].map(p => [`${p}8/35/31.png`, "fixture"])));
+    const plane = Number(/\/p([1-3])\/8\//.exec(url)?.[1] ?? 0);
+    const style = url.includes("/standard/") ? "standard" : "tactical";
     if (!url.endsWith("/8/35/31.png")) return new Response(null, { status: 404 });
     return new Response(new Uint8Array(tiles.get(`${style}/${plane}`)!));
   };

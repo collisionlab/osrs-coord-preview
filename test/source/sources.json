@@ -1,34 +1,34 @@
 {
   "standard-0.png": {
-    "url": "https://tiles.collisionlab.world/standard/2740-8acf5d122b49/8/35/31.png",
+    "url": "https://tiles.collisionlab.world/standard/2740-07d92fc06f50/8/35/31.png",
     "sha256": "b6ae37f81c911d2855d949003803cb4aa136f3766187e33396a0339340f15aeb"
   },
   "standard-1.png": {
-    "url": "https://tiles.collisionlab.world/insets/51fe5e2dd34333f5f39380df/planes-standard/1/8/35/31.png",
+    "url": "https://tiles.collisionlab.world/standard/2740-07d92fc06f50/p1/8/35/31.png",
     "sha256": "7d786d8cd3686ec3fdaeda00e801a3064df4666b0febb2d98fc6228ec7dbef1e"
   },
   "standard-2.png": {
-    "url": "https://tiles.collisionlab.world/insets/51fe5e2dd34333f5f39380df/planes-standard/2/8/35/31.png",
+    "url": "https://tiles.collisionlab.world/standard/2740-07d92fc06f50/p2/8/35/31.png",
     "sha256": "094734a0b81a877bc187668c8ffa973c851643b0c8d27f378ad51d236fdd1ae0"
   },
   "standard-3.png": {
-    "url": "https://tiles.collisionlab.world/insets/51fe5e2dd34333f5f39380df/planes-standard/3/8/35/31.png",
+    "url": "https://tiles.collisionlab.world/standard/2740-07d92fc06f50/p3/8/35/31.png",
     "sha256": "1ce853149b4da947f190e75c011194a8adc5e061f0754344eee8bebde995694c"
   },
   "tactical-0.png": {
-    "url": "https://tiles.collisionlab.world/tactical/2740-8acf5d122b49/8/35/31.png",
+    "url": "https://tiles.collisionlab.world/tactical/2740-07d92fc06f50/8/35/31.png",
     "sha256": "9a4635fb3dda54888459db3fef4086709201c4210501b0517568146df24419e8"
   },
   "tactical-1.png": {
-    "url": "https://tiles.collisionlab.world/insets/51fe5e2dd34333f5f39380df/planes/1/8/35/31.png",
+    "url": "https://tiles.collisionlab.world/tactical/2740-07d92fc06f50/p1/8/35/31.png",
     "sha256": "3fdcf7c48ba9d62100c8104923d9d20a883ac4a530d7be75c46fb649fb825a27"
   },
   "tactical-2.png": {
-    "url": "https://tiles.collisionlab.world/insets/51fe5e2dd34333f5f39380df/planes/2/8/35/31.png",
+    "url": "https://tiles.collisionlab.world/tactical/2740-07d92fc06f50/p2/8/35/31.png",
     "sha256": "0504b7724f35bf05f53c1eb93cab603db2a444f7e3e32025ce7668657b7cd62b"
   },
   "tactical-3.png": {
-    "url": "https://tiles.collisionlab.world/insets/51fe5e2dd34333f5f39380df/planes/3/8/35/31.png",
+    "url": "https://tiles.collisionlab.world/tactical/2740-07d92fc06f50/p3/8/35/31.png",
     "sha256": "1392d7e1bbc9f725c3c554000e533609b153f37cb20dd69e0a69cd89cbe18f1f"
   }
 }

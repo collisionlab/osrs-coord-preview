@@ -12,7 +12,7 @@ test("keys depend only on pixel inputs; caching deduplicates across batches", as
   const key=await objectKey(first);
   assert.match(key,/^[a-f0-9]{64}\.png$/);
   assert.equal(key,await objectKey(second));
-  for (const options of [{style:"tactical" as const},{cropSize:386},{markerRadius:3},{tileVersion:"2741-8acf5d122b49"},{insetVersion:"111111111111111111111111"}])
+  for (const options of [{style:"tactical" as const},{cropSize:386},{markerRadius:3},{tileVersion:"2741-8acf5d122b49"}])
     assert.notEqual(key,await objectKey(first,options));
   const objects=new Map<string,Uint8Array>();let puts=0,fetches=0;
   const store:ImageStore={has:async key=>objects.has(key),put:async(key,bytes)=>{puts++;objects.set(key,bytes);}};

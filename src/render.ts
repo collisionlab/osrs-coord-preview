@@ -31,28 +31,19 @@ export async function renderBatch(items: CoordinateItem[], options: RenderOption
     try {
       const c = renderConfig({ ...options, style: item.style ?? options.style });
       const base = `${c.tileBaseUrl}/${c.style}/${c.tileVersion}`;
-      const sidecar = `${c.tileBaseUrl}/insets/${c.insetVersion}`;
-      const [manifest, baseManifest, index] = await Promise.all([
-        json(`${sidecar}/manifest.json`), json(`${base}/manifest.json`), json(`${base}/index.json`)
-      ]);
-      if (manifest.tileVersion !== c.tileVersion || manifest.layout !== "explv-tms-v1" ||
-          manifest.cacheIdx255Sha256 !== baseManifest.cacheIdx255Sha256 ||
-          baseManifest.layout !== "explv-tms-v1" || baseManifest.plane !== 0)
-        throw new Error("Tile and inset releases do not match");
-      const directory = manifest.supplementalStyles?.[c.style];
-      if (!directory || !/^[a-z-]+$/.test(directory)) throw new Error("Source style is unavailable");
+      const [manifest, index] = await Promise.all([json(`${base}/manifest.json`), json(`${base}/index.json`)]);
+      // Every plane in one pyramid: plane 0 at the root, planes 1-3 under p1/-p3/ (osrs-tiles docs/tiles.md).
+      if (manifest.layout !== "explv-tms-v1" || manifest.planes?.length !== 4)
+        throw new Error("Tile release lacks the all-plane layout");
       const plane = item.parsed.plane;
       if (!Number.isInteger(plane) || plane < 0 || plane > 3) throw new Error("Invalid plane");
-      const supplemental: number[] = manifest.supplemental[plane];
+      const prefix = plane ? `p${plane}/` : "";
       const resolved = resolveTileCoordinate(item.parsed.x, item.parsed.y);
       if (options.debug) (options.logger ?? console.error)(`[debug] ${item.id}: plane=${plane} tile=${resolved.tileX},${resolved.tileY} pixel=${resolved.pixelX},${resolved.pixelY}`);
+      // A square without a tile on this plane is black: it has no terrain there, or is all black.
       const source = (col: number, row: number) => {
-        const relative = `8/${col}/${row}.png`;
-        if (plane === 0 && Object.hasOwn(index, relative)) return `${base}/${relative}`;
-        const rx = col + 15, ry = row + 19;
-        if (rx >= 0 && rx < 256 && ry >= 0 && ry < 256 && supplemental.includes(rx * 256 + ry))
-          return `${sidecar}/${directory}/${plane}/${relative}`;
-        return undefined;
+        const relative = `${prefix}8/${col}/${row}.png`;
+        return Object.hasOwn(index, relative) ? `${base}/${relative}` : undefined;
       };
       if (!source(resolved.tileX, resolved.tileY)) throw new Error(`No source imagery for plane ${plane} at ${item.coordinate}`);
       const nativeCrop = c.cropSize / 2;
