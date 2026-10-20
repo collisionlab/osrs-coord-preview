@@ -58,7 +58,6 @@ export interface RenderManifest {
 export interface RenderOptions {
   outputDir: string;
   tileVersion?: string;
-  insetVersion?: string;
   style?: "standard" | "tactical";
   cropSize?: number;
   markerRadius?: number;

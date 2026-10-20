@@ -11,7 +11,6 @@ interface CliArgs {
   debug: boolean;
   tileBaseUrl?: string;
   tileVersion?: string;
-  insetVersion?: string;
   style?: "standard" | "tactical";
 }
 
@@ -45,7 +44,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
     options: {
       "tile-base-url": { type: "string" },
       "tile-version": { type: "string" },
-      "inset-version": { type: "string" },
       style: { type: "string" },
       coordinates: {
         type: "string"
@@ -68,7 +66,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
   const args: CliArgs = {
     tileBaseUrl: parsed.values["tile-base-url"],
     tileVersion: parsed.values["tile-version"],
-    insetVersion: parsed.values["inset-version"],
     style: parsed.values.style as "standard" | "tactical" | undefined,
     coordinates: parsed.values.coordinates,
     coordinatesFile: parsed.values["coordinates-file"],

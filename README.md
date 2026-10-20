@@ -32,9 +32,9 @@ npm run cli -- --coordinates-file fixtures/coordinates.json --style tactical
 ```
 
 No credentials are required. Coordinates encode the plane as `x/y/plane`.
-`--tile-version`, `--inset-version` and `--tile-base-url` explicitly override
+`--tile-version` and `--tile-base-url` explicitly override
 [tiles.json](tiles.json), for example against a locally served fixture tree.
-A tile/inset pair must match the same cache; no request-time `latest` lookup is used.
+No request-time `latest` lookup is used.
 Supported bounds are `0..16383` on both axes and planes `0..3`. Requests and CLI
 batches accept at most 10 items / 16 KiB, with bounded string metadata and unique
 IDs. An optional per-item `style` is `standard` (default) or `tactical`.
@@ -59,16 +59,14 @@ an 8px square. The previous renderer covered the same 48-square extent, but used
 a tile-edge pixel as its marker centre; this migration centres the actual square.
 See synthetic seam/orientation tests and pinned real-map goldens in `test/`.
 
-Plane 0 uses `<style>/<tileVersion>/8/<column>/<row>.png`. Additional terrain
-uses the existing immutable inset sidecar:
-`insets/<insetVersion>/planes-standard/<plane>/8/<column>/<row>.png` or
-`planes/<plane>/8/<column>/<row>.png` for tactical. The sidecar includes main-world
-upper floors as well as dungeon floors. It publishes only map squares containing
-visible terrain. A target with no source tile fails. Known absent neighbouring
-squares render black; a listed tile returning 404 fails, and no upper floor ever
-uses plane 0. Tile and inset cache fingerprints must agree.
+Every plane comes from the pinned tiles (osrs-tiles `docs/tiles.md`): plane 0 at
+`<style>/<tileVersion>/8/<column>/<row>.png`, planes 1–3 at
+`<style>/<tileVersion>/p<plane>/8/<column>/<row>.png`. The style's `index.json`
+lists every tile. A target whose square has no tile fails. Neighbouring squares
+with no tile render black, a listed tile returning 404 fails, and no upper floor
+ever uses plane 0.
 
-SHA-256 keys include numeric XY/plane, style, both immutable source versions,
+SHA-256 keys include numeric XY/plane, style, the immutable tile version,
 source base URL, renderer implementation version, crop size and marker radius.
 Labels, sources, batch order and IDs are excluded. Update `RENDERER_VERSION` in
 `src/config.ts` whenever rendering code or image-affecting dependency versions
@@ -103,8 +101,9 @@ It preserves project, region and deployment controls. Infra validates the matchi
 bundle/hash and OpenTofu plan before merging a trusted non-draft bot pin.
 Artifact Registry caches the public GHCR image for Cloud Run.
 
-`osrs-tiles` proposes `tiles.json` updates for both this repo and the planner.
-Trusted non-draft tile pins merge only after tests; draft pins wait for review.
+`osrs-tiles` proposes `tiles.json` updates (`pin/map-assets`, "Use tiles …") when a
+new tile version is published; this repo pins no inset bundle. Trusted non-draft
+tile pins merge only after tests; draft pins (large tile changes) wait for review.
 Tests cover geometry, every plane/style, real-map goldens, deterministic identity,
 partial failures, signed R2 requests and Worker miss/publication/cache-hit paths.
 

@@ -40,7 +40,7 @@ test("listed missing tiles fail per item; absent upper plane never falls back", 
   try {
     const fixtures=await fixtureFetch();
     const items=parseCoordinateItems('[{"coordinate":"3232/3232/0"},{"coordinate":"3232/3232/1"},{"coordinate":"3296/3232/2"}]');
-    const result=await renderBatch(items,{outputDir:dir,fetchImpl:async (url,init)=> String(url).includes('/planes-standard/1/') ? new Response(null,{status:404}) : fixtures(url,init)});
+    const result=await renderBatch(items,{outputDir:dir,fetchImpl:async (url,init)=> /\/standard\/[^/]+\/p1\//.test(String(url)) ? new Response(null,{status:404}) : fixtures(url,init)});
     assert.equal(result.renderCount,1);assert.equal(result.failedCount,2);
   } finally { await fs.rm(dir,{recursive:true,force:true}); }
 });
@@ -49,16 +49,14 @@ test("pinned CollisionLab Lumbridge map square on all four planes matches real-i
   const dir=await fs.mkdtemp(path.join(os.tmpdir(),"preview-real-"));
   try {
     const sources=JSON.parse(await fs.readFile(path.join(import.meta.dirname,"source/sources.json"),"utf8"));
-    const sidecar=await fs.readFile(path.join(import.meta.dirname,"source/manifest.json"));
-    const manifest=JSON.parse(sidecar.toString());
     const {createHash}=await import("node:crypto");
     for (const style of ["standard","tactical"] as const) for(let plane=0;plane<4;plane++) {
       const source=await fs.readFile(path.join(import.meta.dirname,`source/${style}-${plane}.png`));
       assert.equal(createHash("sha256").update(source).digest("hex"),sources[`${style}-${plane}.png`].sha256);
       const fetchImpl:typeof fetch=async input=>{
         const url=String(input);
-        if(url.endsWith('/manifest.json')) return url.includes('/insets/') ? new Response(new Uint8Array(sidecar)) : Response.json({plane:0,layout:"explv-tms-v1",cacheIdx255Sha256:manifest.cacheIdx255Sha256});
-        if(url.endsWith('/index.json')) return Response.json({'8/35/31.png':'fixture'});
+        if(url.endsWith('/manifest.json')) return Response.json({layout:"explv-tms-v1",planes:[{},{},{},{}]});
+        if(url.endsWith('/index.json')) return Response.json({[`${plane ? `p${plane}/` : ''}8/35/31.png`]:'fixture'});
         assert.ok(url.endsWith('/8/35/31.png'));return new Response(new Uint8Array(source));
       };
       const result=await renderBatch(parseCoordinateItems(`[{"coordinate":"3232/3232/${plane}","id":"real"}]`),{outputDir:dir,style,fetchImpl});
