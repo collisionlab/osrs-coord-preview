@@ -21,5 +21,5 @@ test("rejects bounds, invalid metadata, styles and oversized batches", () => {
     assert.throws(()=>parseCoordinate(coordinate));
   assert.throws(()=>parseCoordinateItems(JSON.stringify([{coordinate:"3200/3200/0",id:4}])));
   assert.throws(()=>parseCoordinateItems(JSON.stringify([{coordinate:"3200/3200/0",style:"other"}])));
-  assert.throws(()=>parseCoordinateItems(JSON.stringify(Array.from({length:11},()=>({coordinate:"3200/3200/0"})))));
+  assert.throws(()=>parseCoordinateItems(JSON.stringify(Array.from({length:51},()=>({coordinate:"3200/3200/0"})))));
 });

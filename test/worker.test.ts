@@ -33,7 +33,7 @@ test("Worker R2 miss -> renderer -> publication -> hit and immutable PNG retriev
     assert.equal((await mf.dispatchFetch(data.items[0].imageUrl,{headers:{"if-none-match":image.headers.get("etag")!}})).status,304);
     await post('[{"coordinate":"3232/3232/0","label":"another batch"}]');assert.equal(renders,2);
     assert.equal((await post('oops')).status,400);
-    assert.equal((await post(' '.repeat(16385))).status,413);
+    assert.equal((await post(' '.repeat(65537))).status,413);
     assert.equal((await mf.dispatchFetch("https://tiles.test/previews/images/../secret")).status,404);
     assert.equal((await mf.dispatchFetch("https://tiles.test/previews/images/"+"a".repeat(64)+".png")).status,404);
   } finally { await mf.dispose(); }
