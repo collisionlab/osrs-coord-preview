@@ -36,7 +36,7 @@ No credentials are required. Coordinates encode the plane as `x/y/plane`.
 [tiles.json](tiles.json), for example against a locally served fixture tree.
 No request-time `latest` lookup is used.
 Supported bounds are `0..16383` on both axes and planes `0..3`. Requests and CLI
-batches accept at most 10 items / 16 KiB, with bounded string metadata and unique
+batches accept at most 50 items / 64 KiB, with bounded string metadata and unique
 IDs. An optional per-item `style` is `standard` (default) or `tactical`.
 Malformed input returns HTTP 400; excessive HTTP bodies return 413, wrong media
 types 415, throttled requests 429. Missing imagery is an individual failure in a

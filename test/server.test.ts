@@ -12,7 +12,7 @@ test("origin requires its secret and rejects malformed or excessive input before
   try {
     assert.equal((await post("[]","Bearer incorrect")).status,401);
     assert.equal((await post("oops")).status,400);
-    assert.equal((await post(" ".repeat(16385))).status,413);
+    assert.equal((await post(" ".repeat(65537))).status,413);
     assert.equal((await fetch(url)).status,405);
   } finally { server.close();delete process.env.ORIGIN_TOKEN; }
 });

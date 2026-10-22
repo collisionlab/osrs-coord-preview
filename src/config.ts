@@ -3,8 +3,10 @@ import type { CoordinateItem, RenderOptions } from "./types.js";
 
 export const PUBLIC_RENDER_URL = "https://tiles.collisionlab.world/previews/v1/render";
 export const CACHE_CONTROL = "public, max-age=31536000, immutable";
-export const MAX_BODY_BYTES = 16384;
-export const MAX_BATCH = 10;
+export const MAX_BODY_BYTES = 65536;
+// Each cache miss is one Worker subrequest to the origin; 50 fits the Workers
+// free-plan subrequest budget. Clients split larger inputs into several batches.
+export const MAX_BATCH = 50;
 // Bump whenever pixel generation or source interpretation changes.
 export const RENDERER_VERSION = "collisionlab-2";
 export function renderConfig(options: Partial<RenderOptions> = {}) {
