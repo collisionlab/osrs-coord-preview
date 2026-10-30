@@ -7,11 +7,11 @@
     "blueprint"
   ],
   "routingLayers": {
-    "version": "719d50c999e5a598e997f62e",
-    "tileVersion": "2746-549df720fe90",
-    "collisionContentSha256": "5b58a754590e55a70e33393ca452d5fd7f8a3e04bc46cbcad85e751f3f440eda",
-    "transportSha256": "6f1e7275d8fe974ea0de01282c66f4aa0f083adb59a9d20469674e583cf09f02",
-    "separatorSha256": "18a396fd9c70e45913b47a62d51b015193e220fb7d644fa9302a52d0074ee262",
-    "pluginRevision": "537092df2be681b7f47b488c1adc7be40c8d7b59"
+    "version": "9c9fd46e0ed95eef4cb4f9d4",
+    "tileVersion": "2752-549df720fe90",
+    "collisionContentSha256": "de79c477762209f6c94c156d11f8324a8e6c944e99e01b281f9ae909aa9802fe",
+    "transportSha256": "bfd75a5688ee077684d1e1a602e1cba54cb12d2cee2fb841ee0adf82dbd7be49",
+    "separatorSha256": "37d6a546752ce66283e32da63ee670b5536f50838b37a4c83c2d754f09e0e267",
+    "pluginRevision": "db84d1e6a6740fdb13d3aa5ab2a56ae6729661c5"
   }
 }
