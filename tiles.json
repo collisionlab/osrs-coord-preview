@@ -1,14 +1,14 @@
 {
   "base": "https://tiles.collisionlab.world",
-  "version": "2762-f44651b39dd6",
+  "version": "2772-f44651b39dd6",
   "styles": [
     "standard",
     "tactical",
     "blueprint"
   ],
   "routingLayers": {
-    "version": "51ade82ccebe7d0bc36844d1",
-    "tileVersion": "2752-38b3ceabb211",
+    "version": "4cc670e744774bd725c253e2",
+    "tileVersion": "2772-f44651b39dd6",
     "collisionContentSha256": "54ba7be69fa68db4a6cc2acc8ddeddf89b51815a11bc7acab67722f726d5e51b",
     "transportSha256": "e8e86e7290bbb7c4bcd84cbda87c68e06d32263a6725bc81720ce3ad01b8245c",
     "separatorSha256": "37d6a546752ce66283e32da63ee670b5536f50838b37a4c83c2d754f09e0e267",
